@@ -10,22 +10,23 @@ def batchstd(x):
     std = tf.reduce_mean(tf.square(x-mean), axis=0)
     return std
 
-def g(z,u):
+def g(z,u,l):
 
-    a1 = tf.Variable(initial_value=tf.random_normal(shape=z.shape), dtype=tf.float32)
-    a2 = tf.Variable(initial_value=tf.random_normal(shape=z.shape), dtype=tf.float32)
-    a3 = tf.Variable(initial_value=tf.random_normal(shape=z.shape), dtype=tf.float32)
-    a4 = tf.Variable(initial_value=tf.random_normal(shape=z.shape), dtype=tf.float32)
-    a5 = tf.Variable(initial_value=tf.random_normal(shape=z.shape), dtype=tf.float32)
-    a6 = tf.Variable(initial_value=tf.random_normal(shape=u.shape), dtype=tf.float32)
-    a7 = tf.Variable(initial_value=tf.random_normal(shape=u.shape), dtype=tf.float32)
-    a8 = tf.Variable(initial_value=tf.random_normal(shape=u.shape), dtype=tf.float32)
-    a9 = tf.Variable(initial_value=tf.random_normal(shape=u.shape), dtype=tf.float32)
-    a10 = tf.Variable(initial_value=tf.random_normal(shape=u.shape), dtype=tf.float32)
+    u_shape = (1,l)
+    a1 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a1')
+    a2 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a2')
+    a3 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a3')
+    a4 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a4')
+    a5 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a5')
+    a6 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a6')
+    a7 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a7')
+    a8 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a8')
+    a9 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a9')
+    a10 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a10')
 
-    mu_i = a1*tf.nn.sigmoid(tf.mul(a2, z) + a3) + tf.mul(a4, z) + a5
-    v_i = a6*tf.nn.sigmoid(tf.mul(a7, z) + a8) + tf.mul(a9, z) + a10
+    mu_i = tf.multiply(a1,tf.nn.sigmoid(tf.multiply(a2, u) + a3)) + tf.multiply(a4, u) + a5
+    v_i = tf.multiply(a6,tf.nn.sigmoid(tf.multiply(a7, u) + a8)) + tf.multiply(a9, u) + a10
 
-    res = tf.mul((z - mu_i),v_i) + mu_i
+    res = tf.multiply((z - mu_i), v_i) + mu_i
 
     return res

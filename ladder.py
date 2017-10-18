@@ -1,18 +1,15 @@
 import tensorflow as tf
 from helpers import batchmean, batchstd, g
-#from tensorflow.contrib.layers import dense
-#from tensorflow.contrib.layers import batch_norm
-#from tensorflow.nn import relu, softmax
 
-LAYERS = [20, 10, 5]
+LAYERS = [20, 10, 10]
 SIGMA = 1.0
 LAYER_IMPORTANCE = [0.5,0.3,0.2]
 
-x = tf.placeholder(tf.float32, shape=(100, 28*28)) # MNIST dataset
-y_gt = tf.placeholder(tf.float32, shape=(100, 100)) # MNIST dataset
+x = tf.placeholder(tf.float32, shape=(None, 28*28)) # MNIST dataset
+y_gt = tf.placeholder(tf.float32, shape=(None, 10)) # MNIST dataset
 
 # introduce noise to the inputs
-x_noisy = x + tf.random_normal(shape=x.shape, mean=0.0, stddev=SIGMA, dtype=tf.float32, seed=None, name=None)
+x_noisy = x + tf.random_normal(shape=tf.shape(x), mean=0.0, stddev=SIGMA, dtype=tf.float32, seed=None, name='n_0')
 
 '''Encoder with noise'''
 z_tilde_layers = []
@@ -23,19 +20,19 @@ for i, l in enumerate(LAYERS):
     scope_name = 'L{:d}'.format(i)
 
     with tf.variable_scope(scope_name):
-        _ = tf.layers.dense(inputs = layer_inp, units = l, activation=None, use_bias=True, reuse = None, name='dense')
-        z_tilde_l += tf.random_normal(shape=_.shape, mean=0.0, stddev=SIGMA, dtype=tf.float32, seed=None, name=None)
+        z_tilde_l = tf.layers.dense(inputs = layer_inp, units = l, activation=None, use_bias=True, reuse = None)
+        z_tilde_l += tf.random_normal(shape=tf.shape(z_tilde_l), mean=0.0, stddev=SIGMA, dtype=tf.float32, seed=None, name=None)
         z_tilde_layers.append(z_tilde_l)
-        out = tf.contrib.layers.batch_norm(inputs=z_tilde_l, is_training=True, scale=True, activation_fn = tf.nn.relu)
+        if i < (len(LAYERS)-1):
+            out = tf.contrib.layers.batch_norm(inputs=z_tilde_l, is_training=True, scale=True, activation_fn = tf.nn.relu)
+        else:
+            out = tf.contrib.layers.batch_norm(inputs=z_tilde_l, is_training=True, scale=True, activation_fn=tf.nn.softmax)
         h_tilde_layers.append(out)
         layer_inp = out
 
-# final softmax
-scope_name = 'L{:d}'.format(len(LAYERS))
-with tf.variable_scope(scope_name):
-    y_tilde = tf.layers.dense(inputs = out, units = 10, activation=tf.nn.softmax, use_bias=True,reuse = False) # 10 units for 10 numbers
-    #prob = tf.nn.softmax(logits)
+y_tilde = out
 
+# define supervised loss
 C_sv = tf.losses.softmax_cross_entropy(onehot_labels=y_gt, logits=y_tilde)
 
 print([s.name for s in tf.global_variables()])
@@ -48,7 +45,7 @@ z_list = []
 for i, l in enumerate(LAYERS):
     print(i)
     scope_name = 'L{:d}'.format(i)
-    with tf.variable_scope(scope_name):
+    with tf.variable_scope(scope_name, reuse=True):
         z_pre = tf.layers.dense(inputs = layer_inp, units = l, activation=None, use_bias=True, reuse = True)
 
         mean_vectors.append(batchmean(z_pre))
@@ -56,13 +53,13 @@ for i, l in enumerate(LAYERS):
 
         z = tf.contrib.layers.batch_norm(inputs=z_pre, is_training=True, scale=True)
         z_list.append(z)
-        h_l = tf.nn.relu(z)
 
+        if i < (len(LAYERS)-1):
+            h_l = tf.nn.relu(z)
+        else:
+            h_l = tf.nn.softmax(z)
 
-        layer_inp = out
-
-with tf.variable_scope(scope_name):
-    y_pred = tf.layers.dense(inputs = out, units = 10, activation=tf.nn.softmax, use_bias=True,reuse = False)
+        layer_inp = h_l
 
 '''Decoder'''
 u_list = [y_tilde]
@@ -70,17 +67,29 @@ C_uv = [] # unsupervised cost
 for i, l in enumerate(LAYERS[::-1]):
     # denoising g(z,u)
 
-    z_hat_i = g(z_tilde_layers[-1-i], u_list[-1])
+    L_nr = str(len(LAYERS)-i)
+
+    if i==0:
+        u_l = tf.contrib.layers.batch_norm(inputs=u_list[-1-i], is_training=True, scale=True)
+        print('')
+        z_hat_i = g(z_tilde_layers[-1-i], u_l, l)
+    else:
+        _ = tf.layers.dense(inputs=u_list[-1-i], units=l, name='V_'+L_nr)
+        u_l = tf.contrib.layers.batch_norm(inputs=_, is_training=True, scale=True)
+        z_hat_i = g(z_tilde_layers[-1-i], u_l, l)
+
     z_hat_i_BN = tf.divide(z_hat_i - mean_vectors[-1-i], std_vectors[-1-i])
+
     C_uv_l = LAYER_IMPORTANCE[-1-i]*tf.reduce_mean(tf.norm(z_hat_i_BN-z_list[-1-i],axis=1),axis=0)/l
     C_uv.append(C_uv_l)
 
-    u_list.append(tf.layers.dense(inputs = z_hat_i_BN, units = LAYER[-2-i], activation=tf.nn.softmax, use_bias=True,reuse = False))
+    u_list.append(z_hat_i_BN)
 
-sum = 0
+C_uv_sum = 0
 for c in C_uv:
-    sum += c
+    C_uv_sum += c
 
+C_result = C_uv_sum + C_uv
 
 
 print([s.name for s in tf.global_variables()])
