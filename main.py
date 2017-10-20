@@ -5,6 +5,8 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from helpers import to_one_hot
 
+tf.logging.set_verbosity(tf.logging.INFO)
+
 if __name__ == '__main__':
     mnist_data = mnist.load_data()
 
@@ -34,18 +36,25 @@ if __name__ == '__main__':
               'device': '/cpu:0',
               'n_sigma': 0.1}
 
-    model = tf.estimator.Estimator(model_fn=model_fn, params=params)
+    with tf.device('/cpu:0'):
+        model = tf.estimator.Estimator(model_fn=model_fn, params=params)
 
     train_input_fn = tf.estimator.inputs.numpy_input_fn(x={'x':X_train}, y=y_train, batch_size=128, num_epochs=10,
-                                                        shuffle=True,num_threads=4)
+                                                        shuffle=True, num_threads=1)
 
     model.train(train_input_fn)
 
     test_input_fn = tf.estimator.inputs.numpy_input_fn(x={'x':X_test}, y=y_test, num_epochs=1,
-                                                        shuffle=False, num_threads=4)
+                                                        shuffle=False, num_threads=1)
 
     ev = model.evaluate(test_input_fn)
 
-    confusion_matrix = ev['confusion_matrix']
+    pr = model.predict(test_input_fn)
 
-    print(confusion_matrix)
+    #confusion_matrix = ev['confusion_matrix']
+    #print(confusion_matrix)
+    print(ev['accuracy'])
+    print(y_test[:5])
+
+    for i in range(5):
+        print(next(pr)['y'])

@@ -72,11 +72,10 @@ def model_fn(features, labels, mode, params):
 
                 layer_inp = h_l
 
-        y_pred = h_l # use this op for prediction
+        y_pred = h_l # use this op for prediction after training
 
         if mode == tf.estimator.ModeKeys.PREDICT:
-
-            return tf.estimator.EstimatorSpec(mode=mode, predictions=y_pred)
+            return tf.estimator.EstimatorSpec(mode=mode, predictions={'y':y_pred})
 
         '''Decoder'''
         u_list = [y_tilde]
@@ -110,10 +109,15 @@ def model_fn(features, labels, mode, params):
 
         C_result = C_uv_sum + C_sv
 
-        conf_matrix = tf.losses.confusion_matrix.confusion_matrix(labels=y_gt, predictions=y_pred)
+        #conf_matrix = tf.losses.confusion_matrix.confusion_matrix(labels=y_gt, predictions=y_pred)
 
-        evaL_ops = {'C_sv': C_sv, 'C_uv': C_uv_sum, 'confusion_matrix': conf_matrix}
+        #evaL_ops = {'C_sv': C_sv, 'C_uv': C_uv_sum, 'confusion_matrix': conf_matrix}
+        #conf_matrix = tf.metrics.confusion_matrix.confusion_matrix(labels=y_gt,predictions=y_pred)
+        acc = tf.metrics.accuracy(labels=y_gt,predictions=y_pred)
+        eval_ops = {'accuracy': acc}
+        #eval_ops = {'confusion_matrix': conf_matrix}
+        #eval_ops = {'C_sv': C_sv, 'C_uv': C_uv_sum}
 
-        train_iter = tf.train.GradientDescentOptimizer(learning_rate=param_lr).minimize(C_result)
+        train_iter = tf.train.GradientDescentOptimizer(learning_rate=param_lr).minimize(C_result, global_step=tf.train.get_global_step())
 
-    return tf.estimator.EstimatorSpec(predictions=y_pred, loss=C_result, train_op=train_iter, eval_metric_ops=evaL_ops)
+    return tf.estimator.EstimatorSpec(predictions=y_pred, loss=C_result, train_op=train_iter, eval_metric_ops=eval_ops, mode=mode)
