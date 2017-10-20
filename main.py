@@ -2,14 +2,25 @@ from keras.datasets import mnist
 from ladder import model_fn
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+import numpy as np
+from helpers import to_one_hot
 
 if __name__ == '__main__':
     mnist_data = mnist.load_data()
 
-    X = mnist_data[0]
-    Y = mnist_data[1] # one-hot
+    train = mnist_data[0]
+    test = mnist_data[1] # one-hot
 
-    X_train, X_test, y_train, y_test = train_test_split(X,Y, test_size=0.3)
+    X_train, y_train = train[0], train[1]
+    X_test, y_test = test[0], test[1]
+
+    X_train = X_train.reshape((-1, 28 * 28)).astype(np.float32)
+    X_test = X_test.reshape((-1, 28 * 28)).astype(np.float32)
+
+    y_train = to_one_hot(y_train, num=10)
+    y_test = to_one_hot(y_test, num=10)
+
+    assert isinstance(X_train, np.ndarray)
 
     # param_lr = params['learning_rate']
     # param_layers = params['layer_def']
@@ -19,7 +30,7 @@ if __name__ == '__main__':
 
     params = {'learning_rate': 1e-2,
               'layer_def': [20, 10],
-              'layer_importance': [0.5, 0.5],
+              'layer_importance': [0.3333, 0.3333, 0.3333],
               'device': '/cpu:0',
               'n_sigma': 0.1}
 

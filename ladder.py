@@ -13,8 +13,10 @@ def model_fn(features, labels, mode, params):
     x = features['x']
     y_gt = labels
 
+    #x = tf.reshape(x, shape=(-1, 28*28))
+
     # add output layer to the list of layers (this layer is used as an input for the first decoder layer)
-    param_layers.append(y_gt.shape[0])
+    param_layers.append(10)
 
     with tf.device('/cpu:0'):
 

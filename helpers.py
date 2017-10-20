@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 def batchmean(x):
     '''Calculate mean of batch'''
@@ -11,7 +12,6 @@ def batchstd(x):
     return std
 
 def g(z,u,l):
-
     u_shape = (1,l)
     a1 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a1')
     a2 = tf.Variable(initial_value=tf.random_normal(shape=u_shape), dtype=tf.float32, name='a2')
@@ -30,3 +30,9 @@ def g(z,u,l):
     res = tf.multiply((z - mu_i), v_i) + mu_i
 
     return res
+
+
+def to_one_hot(x, num=10):
+    v = np.zeros((x.shape[0], num))
+    v[np.arange(x.shape[0]), x] = 1
+    return v
