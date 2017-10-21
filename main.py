@@ -3,7 +3,7 @@ from ladder import model_fn
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 import numpy as np
-from helpers import to_one_hot
+from helpers import to_one_hot, uniform_layer_importance
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -22,13 +22,14 @@ if __name__ == '__main__':
     y_train = to_one_hot(y_train, num=10)
     y_test = to_one_hot(y_test, num=10)
 
-    assert isinstance(X_train, np.ndarray)
+    N = 100
 
-    # param_lr = params['learning_rate']
-    # param_layers = params['layer_def']
-    # param_importance = params['layer_importance']
-    # param_device = params['device']  # cpu or gpu
-    # param_n_sigma = params['n_sigma']  # noise value
+    idx = np.random.randint(0, X_train.shape(0), N)
+
+    X_train = X_train[idx,:]
+    y_train = y_train[idx, :]
+
+    assert isinstance(X_train, np.ndarray)
 
     params = {'learning_rate': 1e-2,
               'layer_def': [20, 10],
@@ -39,7 +40,7 @@ if __name__ == '__main__':
     with tf.device('/cpu:0'):
         model = tf.estimator.Estimator(model_fn=model_fn, params=params)
 
-    train_input_fn = tf.estimator.inputs.numpy_input_fn(x={'x':X_train}, y=y_train, batch_size=128, num_epochs=10,
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(x={'x': X_train}, y=y_train, batch_size=1000, num_epochs=10,
                                                         shuffle=True, num_threads=1)
 
     model.train(train_input_fn)
@@ -57,4 +58,4 @@ if __name__ == '__main__':
     print(y_test[:5])
 
     for i in range(5):
-        print(next(pr)['y'])
+        print(next(pr)['y']+1)

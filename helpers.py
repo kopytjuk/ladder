@@ -36,3 +36,7 @@ def to_one_hot(x, num=10):
     v = np.zeros((x.shape[0], num))
     v[np.arange(x.shape[0]), x] = 1
     return v
+
+def uniform_layer_importance(h):
+
+    return [1/(h+1) for i in range(h)]

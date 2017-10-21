@@ -13,8 +13,6 @@ def model_fn(features, labels, mode, params):
     x = features['x']
     y_gt = labels
 
-    #x = tf.reshape(x, shape=(-1, 28*28))
-
     # add output layer to the list of layers (this layer is used as an input for the first decoder layer)
     param_layers.append(10)
 
@@ -44,9 +42,6 @@ def model_fn(features, labels, mode, params):
 
         y_tilde = out
 
-        # define supervised loss
-        C_sv = tf.losses.softmax_cross_entropy(onehot_labels=y_gt, logits=y_tilde)
-
         #print([s.name for s in tf.global_variables()])
 
         '''Encoder w/o noise'''
@@ -75,7 +70,8 @@ def model_fn(features, labels, mode, params):
         y_pred = h_l # use this op for prediction after training
 
         if mode == tf.estimator.ModeKeys.PREDICT:
-            return tf.estimator.EstimatorSpec(mode=mode, predictions={'y':y_pred})
+            winner_class = tf.arg_max(y_pred, dimension=1)
+            return tf.estimator.EstimatorSpec(mode=mode, predictions={'y':winner_class})
 
         '''Decoder'''
         u_list = [y_tilde]
@@ -87,7 +83,6 @@ def model_fn(features, labels, mode, params):
 
             if i==0:
                 u_l = tf.contrib.layers.batch_norm(inputs=u_list[-1-i], is_training=True, scale=True)
-                print('')
                 z_hat_i = g(z_tilde_layers[-1-i], u_l, l)
             else:
                 _ = tf.layers.dense(inputs=u_list[-1-i], units=l, name='V_'+L_nr)
@@ -102,6 +97,9 @@ def model_fn(features, labels, mode, params):
             u_list.append(z_hat_i_BN)
 
         C_uv_sum = 0
+
+        # define supervised loss
+        C_sv = tf.losses.softmax_cross_entropy(onehot_labels=y_gt, logits=y_tilde)
 
         # sum up unsupervised costs over all decoder layers
         for c in C_uv:
@@ -118,6 +116,6 @@ def model_fn(features, labels, mode, params):
         #eval_ops = {'confusion_matrix': conf_matrix}
         #eval_ops = {'C_sv': C_sv, 'C_uv': C_uv_sum}
 
-        train_iter = tf.train.GradientDescentOptimizer(learning_rate=param_lr).minimize(C_result, global_step=tf.train.get_global_step())
+        train_iter = tf.train.AdamOptimizer(learning_rate=param_lr).minimize(C_result, global_step=tf.train.get_global_step())
 
     return tf.estimator.EstimatorSpec(predictions=y_pred, loss=C_result, train_op=train_iter, eval_metric_ops=eval_ops, mode=mode)
