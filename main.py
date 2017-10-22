@@ -22,12 +22,12 @@ if __name__ == '__main__':
     y_train = to_one_hot(y_train, num=10)
     y_test = to_one_hot(y_test, num=10)
 
-    N = 100
+    N = 30000
 
-    idx = np.random.randint(0, X_train.shape(0), N)
+    idx = np.random.randint(0, X_train.shape[0], N)
 
     X_train = X_train[idx,:]
-    y_train = y_train[idx, :]
+    y_train = y_train[idx,:]
 
     assert isinstance(X_train, np.ndarray)
 
@@ -35,12 +35,13 @@ if __name__ == '__main__':
               'layer_def': [20, 10],
               'layer_importance': [0.3333, 0.3333, 0.3333],
               'device': '/cpu:0',
-              'n_sigma': 0.1}
+              'n_sigma': 0.1,
+              'num_class': 10}
 
     with tf.device('/cpu:0'):
         model = tf.estimator.Estimator(model_fn=model_fn, params=params)
 
-    train_input_fn = tf.estimator.inputs.numpy_input_fn(x={'x': X_train}, y=y_train, batch_size=1000, num_epochs=10,
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(x={'x':X_train}, y=y_train, batch_size=1000, num_epochs=20,
                                                         shuffle=True, num_threads=1)
 
     model.train(train_input_fn)
